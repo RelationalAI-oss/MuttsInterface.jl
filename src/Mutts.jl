@@ -69,6 +69,11 @@ markimmutable(a) = nothing
     end
 end
 
+function setproperty!(obj::Mutt, name::Symbol, x)
+    @assert name == :__mutt_mutable || ismutable(obj)
+    setfield!(obj, name, x)
+end
+
 function branch(obj :: Mutt)
     branchactions(obj)
     markimmutable(obj)
