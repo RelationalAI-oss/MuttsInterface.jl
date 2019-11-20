@@ -1,4 +1,5 @@
 """
+   module Mutts
 Explorations of a mutable-until-shared discipline in Julia.
 """
 module Mutts
@@ -23,6 +24,10 @@ TODO
 
 export Mutt, @mutt, branch, ismutable, markimmutable, getmutableversion
 
+"""
+    abstract type Mutt end
+Types created via `@mutt`. This means they implement the _mutable-until-shared_ discipline.
+"""
 abstract type Mutt end
 
 function mutt(expr)
@@ -41,9 +46,25 @@ function mutt(expr)
 end
 
 """
-    @mutt expr
+    @mutt struct MyType
+        fields
+    end
 
-Macro to define a mutable-until-shared data type.
+Macro to define a _mutable-until-shared_ data type. Mutable-until-shared types
+are essentially immutable data structures, that give the flexibility of mutating
+them until they are "finished", at which point they are free to be shared with
+other Tasks, or other parts of the code.
+
+`Mutt` types act like mutable structs, until the user calls `markimmutable(obj)`,
+after which they act like purely immutable types.
+
+The complete API includes:
+ - [`markimmutable(obj)`](@ref): Freeze `obj`, preventing any future mutations. 
+ - [`branch(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
+ - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
+   `obj` itself if already mutable, or a [`branch`ed](@ref branch) copy.
+ - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
+   type with any actions that need to occur when it is branched.
 """
 macro mutt(expr)
     return mutt(expr)
@@ -57,6 +78,12 @@ end
 
 branchactions(obj :: Mutt) = nothing
 
+"""
+    markimmutable(obj::Mutt)
+
+Freeeze `obj` from further mutations, making it eligible to pass to
+other Tasks, branch from it, or otherwise share it.
+"""
 markimmutable(a) = nothing
 
 @generated function markimmutable(obj :: T) where {T <: Mutt}
@@ -81,6 +108,11 @@ function setproperty!(obj::Mutt, name::Symbol, x)
     setfield!(obj, name, x)
 end
 
+"""
+    branch(obj::Mutt)
+
+Return a mutable shallow copy of `obj`, whose children are all still immutable.
+"""
 function branch(obj :: Mutt)
     branchactions(obj)
     markimmutable(obj)
