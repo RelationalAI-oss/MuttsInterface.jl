@@ -12,6 +12,13 @@ Notes
     - Need to initialize __mutt_mutable
     - Easiest if we provide a default fallback constructor
     - But then... I guess inner constructors can't be supported?
+
+TODO
+
+- Need some mechanism to ensure that Mutt types can't be shared
+  outside the current Task without being marked immutable.
+    - Perhaps by injecting a check into `put!(::Channel, ::Mutt)`,
+      or by dasserting in setters if the current task has changed.
 =#
 
 export Mutt, @mutt, branch, ismutable, markimmutable, getmutableversion
