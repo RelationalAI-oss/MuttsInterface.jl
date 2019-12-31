@@ -1,6 +1,6 @@
 """
-   module Mutts
-Explorations of a mutable-until-shared discipline in Julia.
+    module Mutts
+Explorations of a mutable-until-shared discipline in Julia. (MUTable 'Til Shared)
 """
 module Mutts
 
@@ -20,6 +20,7 @@ TODO
   outside the current Task without being marked immutable.
     - Perhaps by injecting a check into `put!(::Channel, ::Mutt)`,
       or by dasserting in setters if the current task has changed.
+- Add special casing for empty structs? They are always immutable so don't need the bool..
 =#
 
 export Mutt, @mutt, branch, ismutable, markimmutable, getmutableversion
@@ -31,23 +32,21 @@ Types created via `@mutt`. This means they implement the _mutable-until-shared_ 
 abstract type Mutt end
 
 function mutt(expr)
-    function sub(ex)
-        if @capture(ex, struct T_ fields__ end)
-           :( mutable struct $T <: Mutt
-                   $(fields...)
-                   __mutt_mutable :: Bool
-               end
-           )
-       else
-           ex
-       end
-    end
-    postwalk(sub, expr)
+    if @capture(expr, struct T_ fields__ end)
+       :(mutable struct $T <: Mutt
+            # Put our inserted variable first so the user's constructor can leave
+            # undefined fields if that's a thing they're into.
+            __mutt_mutable :: Bool
+            $(fields...)
+        end)
+   else
+       throw(ArgumentError("@mutt macro must be called with a struct definition: @mutt struct S ... end"))
+   end
 end
 
 """
     @mutt struct MyType
-        fields
+        fields...
     end
 
 Macro to define a _mutable-until-shared_ data type. Mutable-until-shared types
@@ -59,7 +58,7 @@ other Tasks, or other parts of the code.
 after which they act like purely immutable types.
 
 The complete API includes:
- - [`markimmutable(obj)`](@ref): Freeze `obj`, preventing any future mutations. 
+ - [`markimmutable(obj)`](@ref): Freeze `obj`, preventing any future mutations.
  - [`branch(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
  - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
    `obj` itself if already mutable, or a [`branch`ed](@ref branch) copy.
@@ -71,6 +70,7 @@ macro mutt(expr)
 end
 
 ismutable(obj :: Mutt) = obj.__mutt_mutable
+Base.isimmutable(obj :: Mutt) = !ismutable(obj)
 
 function getmutableversion(obj :: Mutt)
     ismutable(obj) ? obj : branch(obj)

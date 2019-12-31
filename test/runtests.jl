@@ -1,4 +1,4 @@
-module Test
+module MuttsTest
 
 using Mutts
 using Test
@@ -31,5 +31,22 @@ Bar(f :: Foo, z :: Float64) = Bar(f, z, true)
 Bar(b :: Bar) = Bar(f, z)
 
 
+# -----------------------------
+
+# Mutts macro expansion
+
+@testset "macro parsing" begin
+    @test @macroexpand(@mutt struct S end) isa Expr
+    @test @macroexpand(@mutt struct S x end) isa Expr
+
+    # Bad parses
+    @test_throws Exception @macroexpand(@mutt 1)
+    @test_throws Exception @macroexpand(@mutt begin
+        struct A
+        end
+        struct B
+        end
+    end)
+end
 
 end
