@@ -16,10 +16,14 @@ f = Foo(3,5)
 @assert ismutable(f)
 f.x = 4
 
+Base.copy(v :: Foo) = Foo(v.x, v.y)
 g = branch(f)
-
 @assert !ismutable(f)
 @assert ismutable(g)
+markimmutable(g)
+
+@assert !ismutable(g)
+
 
 mutable struct Bar <: Mutt
     f :: Foo
@@ -30,6 +34,27 @@ end
 Bar(f :: Foo, z :: Float64) = Bar(f, z, true)
 Bar(b :: Bar) = Bar(f, z)
 
+
+
+# -- Custom Constructors -------------------
+
+# mutable struct __Inner_Baz
+#     x :: Int
+#     v :: Vector{Int}
+#     #__Inner_Baz(x, v=[]) = new(x,v)
+# end
+# mutable struct Baz <: Mutt
+#     _fields :: __Inner_Baz
+#     __mutt_mutable :: Bool
+#     Baz(x, v=[]) = new(__Inner_Baz(x,v), true)
+# end
+#
+# Baz(2)
+#
+# Base.getproperty(x::Baz, f::Symbol) = getproperty(getfield(x,:_fields), f)
+# Base.setproperty!(x::Baz, f::Symbol, v) = setproperty!(getfield(x,:_fields), f, v)
+#
+# Baz(2)._fields
 
 # -----------------------------
 
@@ -48,5 +73,12 @@ Bar(b :: Bar) = Bar(f, z)
         end
     end)
 end
+
+@mutt struct Baz
+    x :: Int
+end
+
+b = Baz(true, 2)
+isimmutable(b)
 
 end

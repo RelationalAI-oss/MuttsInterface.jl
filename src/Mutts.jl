@@ -13,6 +13,14 @@ Notes
     - Need to initialize __mutt_mutable
     - Easiest if we provide a default fallback constructor
     - But then... I guess inner constructors can't be supported?
+- TODO(NHDaly): Maybe we can fix this by creating a secret inner type, and storing it in the
+  outer type, but preventing anyone from accessing it (since we have overloaded
+  getproperty)? ... i dunno, it seems a bit excessive.
+    - Hmm, yeah that seems like overkill, and like it would have all sorts of bad
+      consequences.
+    - Maybe a better approach would be to intercept the inner constructors in the macro
+      and add the boolean to them? Maybe that's not terrible. Lemme try that!
+
 
 TODO
 
@@ -21,6 +29,8 @@ TODO
     - Perhaps by injecting a check into `put!(::Channel, ::Mutt)`,
       or by dasserting in setters if the current task has changed.
 - Add special casing for empty structs? They are always immutable so don't need the bool..
+- Add check (warning or error?) that all fields of Mutts type must also be either Mutts or
+  immutable.
 =#
 
 export Mutt, @mutt, branch, ismutable, markimmutable, getmutableversion
@@ -103,8 +113,8 @@ markimmutable(a) = nothing
     end
 end
 
-function setproperty!(obj::Mutt, name::Symbol, x)
-    @assert name == :__mutt_mutable || ismutable(obj)
+function Base.setproperty!(obj::Mutt, name::Symbol, x)
+    @assert ismutable(obj)
     setfield!(obj, name, x)
 end
 
