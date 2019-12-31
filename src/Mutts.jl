@@ -33,7 +33,7 @@ TODO
   immutable.
 =#
 
-export Mutt, @mutt, branch, ismutable, markimmutable, getmutableversion
+export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion
 
 """
     abstract type Mutt end
@@ -64,14 +64,14 @@ are essentially immutable data structures, that give the flexibility of mutating
 them until they are "finished", at which point they are free to be shared with
 other Tasks, or other parts of the code.
 
-`Mutt` types act like mutable structs, until the user calls `markimmutable(obj)`,
+`Mutt` types act like mutable structs, until the user calls `markimmutable!(obj)`,
 after which they act like purely immutable types.
 
 The complete API includes:
- - [`markimmutable(obj)`](@ref): Freeze `obj`, preventing any future mutations.
- - [`branch(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
+ - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
+ - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
  - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
-   `obj` itself if already mutable, or a [`branch`ed](@ref branch) copy.
+   `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.
 """
@@ -83,22 +83,24 @@ ismutable(obj :: Mutt) = obj.__mutt_mutable
 Base.isimmutable(obj :: Mutt) = !ismutable(obj)
 
 function getmutableversion(obj :: Mutt)
-    ismutable(obj) ? obj : branch(obj)
+    ismutable(obj) ? obj : branch!(obj)
 end
 
 branchactions(obj :: Mutt) = nothing
 
 """
-    markimmutable(obj::Mutt)
+    markimmutable!(obj::Mutt)
 
 Freeeze `obj` from further mutations, making it eligible to pass to
-other Tasks, branch from it, or otherwise share it.
+other Tasks, branch! from it, or otherwise share it.
 """
-markimmutable(a) = nothing
+function markimmutable! end
 
-@generated function markimmutable(obj :: T) where {T <: Mutt}
+markimmutable!(a) = nothing
+
+@generated function markimmutable!(obj :: T) where {T <: Mutt}
     as = map(fieldnames(T)) do sym
-        :( markimmutable(getfield(obj, $(QuoteNode(sym)))) )
+        :( markimmutable!(getfield(obj, $(QuoteNode(sym)))) )
     end
 
     return quote
@@ -119,13 +121,13 @@ function Base.setproperty!(obj::Mutt, name::Symbol, x)
 end
 
 """
-    branch(obj::Mutt)
+    branch!(obj::Mutt)
 
 Return a mutable shallow copy of `obj`, whose children are all still immutable.
 """
-function branch(obj :: Mutt)
+function branch!(obj :: Mutt)
     branchactions(obj)
-    markimmutable(obj)
+    markimmutable!(obj)
 
     obj = copy(obj)
     obj.__mutt_mutable = true

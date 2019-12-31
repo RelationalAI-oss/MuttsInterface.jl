@@ -17,10 +17,10 @@ f = Foo(3,5)
 f.x = 4
 
 Base.copy(v :: Foo) = Foo(v.x, v.y)
-g = branch(f)
+g = branch!(f)
 @assert !ismutable(f)
 @assert ismutable(g)
-markimmutable(g)
+markimmutable!(g)
 
 @assert !ismutable(g)
 
