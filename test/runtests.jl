@@ -74,6 +74,24 @@ Bar(b :: Bar) = Bar(f, z)
         end
     end)
 end
+@testset "Simple Macro Usage" begin
+    @eval begin
+        @mutt struct S
+            x
+        end
+        s = S(1)
+        @test !isimmutable(s)
+        markimmutable!(s)
+        @test isimmutable(s)
+
+        Base.copy(s::S) = S(s.x)
+
+        s = S(1)
+        @test !isimmutable(branch!(s))
+        @test isimmutable(s)
+    end
+end
+
 
 @testset "Inner constructors" begin
     # (eval required to create structs inside a Testset)

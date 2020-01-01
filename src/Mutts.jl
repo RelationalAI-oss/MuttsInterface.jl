@@ -143,6 +143,8 @@ end
 function _mutt_macro(expr)
     if MacroTools.isstructdef(expr)
         def = MacroTools.splitstructdef(expr)
+        # Mutts structs are julia-mutable
+        def[:mutable] = true
         # Add `__mutt_mutable` field to the struct.
         # (Put our inserted variable first so the user's constructor can leave undefined
         # fields if that's a thing they're into.)
