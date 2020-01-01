@@ -4,22 +4,11 @@ Explorations of a mutable-until-shared discipline in Julia. (MUTable 'Til Shared
 """
 module Mutts
 
-import MacroTools: postwalk, @capture
+import MacroTools
+using MacroTools: postwalk, @capture
 
 #=
 Notes
-
-- Constructors
-    - Need to initialize __mutt_mutable
-    - Easiest if we provide a default fallback constructor
-    - But then... I guess inner constructors can't be supported?
-- TODO(NHDaly): Maybe we can fix this by creating a secret inner type, and storing it in the
-  outer type, but preventing anyone from accessing it (since we have overloaded
-  getproperty)? ... i dunno, it seems a bit excessive.
-    - Hmm, yeah that seems like overkill, and like it would have all sorts of bad
-      consequences.
-    - Maybe a better approach would be to intercept the inner constructors in the macro
-      and add the boolean to them? Maybe that's not terrible. Lemme try that!
 
 
 TODO
@@ -41,17 +30,61 @@ Types created via `@mutt`. This means they implement the _mutable-until-shared_ 
 """
 abstract type Mutt end
 
-function mutt(expr)
-    if @capture(expr, struct T_ fields__ end)
-       :(mutable struct $T <: Mutt
-            # Put our inserted variable first so the user's constructor can leave
-            # undefined fields if that's a thing they're into.
-            __mutt_mutable :: Bool
-            $(fields...)
-        end)
+# Turns `@mutt struct S x end` into:
+# ```
+# mutable struct S <: Mutt
+#     __mutt_mutable :: Bool
+#     x
+#     ... constructors ...
+# end
+# ```
+function _mutt_macro(expr)
+    if MacroTools.isstructdef(expr)
+        def = MacroTools.splitstructdef(expr)
+        # Add `__mutt_mutable` field to the struct.
+        # (Put our inserted variable first so the user's constructor can leave undefined
+        # fields if that's a thing they're into.)
+        pushfirst!(def[:fields], (:__mutt_mutable, Bool))
+        # Initialize the new `__mutt_mutable` boolean in the construtors.
+        if isempty(def[:constructors])
+            # Add the default constructor(s), if none exist, to initialize __mutt_mutable.
+            append!(def[:constructors], default_constructors(def[:name], def[:fields][2:end]))
+        else
+            # Inject `true` to initialize __mutt_mutable in `new()` expressions
+            def[:constructors] = map(inject_bool_into_constructor!, def[:constructors])
+        end
+        # Make this type a Mutt.
+        def[:supertype] = Mutt  # TODO: make this a trait instead
+
+        return esc(MacroTools.combinestructdef(def))
    else
        throw(ArgumentError("@mutt macro must be called with a struct definition: @mutt struct S ... end"))
    end
+end
+
+function default_constructors(typename, fields)
+    # TODO: if empty, no bool...?
+    typed_args = Tuple(if f[2] == Any f[1] else MacroTools.combinearg(f..., false, nothing) end
+                       for f in fields)
+    untyped_args = Tuple(f[1] for f in fields)
+    # If none of the args have types, these will be the same.
+    if typed_args == untyped_args
+        [:($typename($(typed_args...)) = new(true, $(untyped_args...)))]
+    else
+        [:($typename($(typed_args...)) = new(true, $(untyped_args...)))
+         :($typename($(untyped_args...)) = new(true, $(untyped_args...)))]
+    end
+end
+function inject_bool_into_constructor!(constructor)
+    function inject_bool_into_new!(expr)
+        if @capture(expr, new(args__))
+            expr.args = [:new, true, args...]
+            expr
+        else
+            expr
+        end
+    end
+    postwalk(inject_bool_into_new!, constructor)
 end
 
 """
@@ -74,9 +107,22 @@ The complete API includes:
    `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.
+
+This macro modifies the definition of `S` to include an extra first parameter:
+`__mutt_mutable :: Bool`, which tracks at runtime when the value becomes immutable. Inner
+constructors are handled automatically, so you not need to construct this generated field.
+
+Example:
+```julia
+@mutt struct S
+    x :: Int
+    y
+    S(x, y=x+1) = new(x,y)
+end
+```
 """
 macro mutt(expr)
-    return mutt(expr)
+    return _mutt_macro(expr)
 end
 
 ismutable(obj :: Mutt) = obj.__mutt_mutable

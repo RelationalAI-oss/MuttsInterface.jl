@@ -2,6 +2,7 @@ module MuttsTest
 
 using Mutts
 using Test
+using MacroTools
 
 mutable struct Foo <: Mutt
     x :: Int
@@ -74,11 +75,40 @@ Bar(b :: Bar) = Bar(f, z)
     end)
 end
 
-@mutt struct Baz
-    x :: Int
+@testset "Inner constructors" begin
+    # (eval required to create structs inside a Testset)
+    @eval begin
+        # Test Inner Constructors
+        @mutt struct SimpleFields
+            x
+            y
+        end
+        @mutt struct NoCustomInner
+            x :: Int
+            y
+        end
+        @mutt struct WithCustomInners
+            x :: Int
+            y
+            WithCustomInners(x, y=2) = new(x,y)
+        end
+        function make end
+        @mutt struct WithInnerFunctions
+            x :: Int
+            y
+            WithInnerFunctions(x, y=2) = new(x,y)
+            # Custom inner function
+            @__MODULE__().make() = new(1,2)
+        end
+    end
+    @eval begin
+        @test ismutable(SimpleFields(1,2))
+        @test ismutable(NoCustomInner(1,2))
+        @test ismutable(WithCustomInners(1,2))
+        @test ismutable(WithCustomInners(1))
+        @test ismutable(WithInnerFunctions(1))
+        @test ismutable(make())
+    end
 end
-
-b = Baz(true, 2)
-isimmutable(b)
 
 end
