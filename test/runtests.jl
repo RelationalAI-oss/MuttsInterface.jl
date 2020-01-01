@@ -89,6 +89,10 @@ end
         s = S(1)
         @test !isimmutable(branch!(s))
         @test isimmutable(s)
+
+        # Assignment from markimmutable! (PR #4)
+        s1 = markimmutable!(s)
+        @test s1 == s
     end
 end
 
