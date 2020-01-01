@@ -30,6 +30,108 @@ Types created via `@mutt`. This means they implement the _mutable-until-shared_ 
 """
 abstract type Mutt end
 
+ismutable(obj :: Mutt) = obj.__mutt_mutable
+Base.isimmutable(obj :: Mutt) = !ismutable(obj)
+
+function getmutableversion(obj :: Mutt)
+    ismutable(obj) ? obj : branch!(obj)
+end
+
+"""
+    branchactions(obj :: Mutt) = nothing
+
+This callback function is called immediately before a Mutt object is branched from (even if
+it was already immutable). Users can add methods to this callback to perform arbitrary
+actions right before an object is branched.
+"""
+branchactions(obj :: Mutt) = nothing
+
+"""
+    markimmutable!(obj::Mutt)
+
+Freeeze `obj` from further mutations, making it eligible to pass to
+other Tasks, branch! from it, or otherwise share it.
+"""
+function markimmutable! end
+
+markimmutable!(a) = nothing
+
+@generated function markimmutable!(obj :: T) where {T <: Mutt}
+    as = map(fieldnames(T)) do sym
+        :( markimmutable!(getfield(obj, $(QuoteNode(sym)))) )
+    end
+
+    return quote
+        if ismutable(obj)
+            # Mark all Mutt fields immutable
+            $(as...)
+
+            # Then mark this object immutable
+            obj.__mutt_mutable = false
+        end
+        nothing
+    end
+end
+
+# Override setproperty! to prevent mutating a Mutt once it's been marked immutable.
+function Base.setproperty!(obj::Mutt, name::Symbol, x)
+    @assert ismutable(obj)
+    setfield!(obj, name, x)
+end
+
+"""
+    branch!(obj::Mutt)
+
+Return a mutable shallow copy of `obj`, whose children are all still immutable.
+"""
+function branch!(obj :: Mutt)
+    branchactions(obj)
+    markimmutable!(obj)
+
+    obj = copy(obj)
+    obj.__mutt_mutable = true
+    obj
+end
+
+
+"""
+    @mutt struct MyType
+        fields...
+    end
+
+Macro to define a _mutable-until-shared_ data type. Mutable-until-shared types
+are essentially immutable data structures, that give the flexibility of mutating
+them until they are "finished", at which point they are free to be shared with
+other Tasks, or other parts of the code.
+
+`Mutt` types act like mutable structs, until the user calls `markimmutable!(obj)`,
+after which they act like purely immutable types.
+
+The complete API includes:
+ - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
+ - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
+ - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
+   `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
+ - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
+   type with any actions that need to occur when it is branched.
+
+This macro modifies the definition of `S` to include an extra first parameter:
+`__mutt_mutable :: Bool`, which tracks at runtime when the value becomes immutable. Inner
+constructors are handled automatically, so you not need to construct this generated field.
+
+Example:
+```julia
+@mutt struct S
+    x :: Int
+    y
+    S(x, y=x+1) = new(x,y)
+end
+```
+"""
+macro mutt(expr)
+    return _mutt_macro(expr)
+end
+
 # Turns `@mutt struct S x end` into:
 # ```
 # mutable struct S <: Mutt
@@ -85,99 +187,6 @@ function inject_bool_into_constructor!(constructor)
         end
     end
     postwalk(inject_bool_into_new!, constructor)
-end
-
-"""
-    @mutt struct MyType
-        fields...
-    end
-
-Macro to define a _mutable-until-shared_ data type. Mutable-until-shared types
-are essentially immutable data structures, that give the flexibility of mutating
-them until they are "finished", at which point they are free to be shared with
-other Tasks, or other parts of the code.
-
-`Mutt` types act like mutable structs, until the user calls `markimmutable!(obj)`,
-after which they act like purely immutable types.
-
-The complete API includes:
- - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
- - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
- - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
-   `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
- - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
-   type with any actions that need to occur when it is branched.
-
-This macro modifies the definition of `S` to include an extra first parameter:
-`__mutt_mutable :: Bool`, which tracks at runtime when the value becomes immutable. Inner
-constructors are handled automatically, so you not need to construct this generated field.
-
-Example:
-```julia
-@mutt struct S
-    x :: Int
-    y
-    S(x, y=x+1) = new(x,y)
-end
-```
-"""
-macro mutt(expr)
-    return _mutt_macro(expr)
-end
-
-ismutable(obj :: Mutt) = obj.__mutt_mutable
-Base.isimmutable(obj :: Mutt) = !ismutable(obj)
-
-function getmutableversion(obj :: Mutt)
-    ismutable(obj) ? obj : branch!(obj)
-end
-
-branchactions(obj :: Mutt) = nothing
-
-"""
-    markimmutable!(obj::Mutt)
-
-Freeeze `obj` from further mutations, making it eligible to pass to
-other Tasks, branch! from it, or otherwise share it.
-"""
-function markimmutable! end
-
-markimmutable!(a) = nothing
-
-@generated function markimmutable!(obj :: T) where {T <: Mutt}
-    as = map(fieldnames(T)) do sym
-        :( markimmutable!(getfield(obj, $(QuoteNode(sym)))) )
-    end
-
-    return quote
-        if ismutable(obj)
-            # Mark all Mutt fields immutable
-            $(as...)
-
-            # Then mark this object immutable
-            obj.__mutt_mutable = false
-        end
-        nothing
-    end
-end
-
-function Base.setproperty!(obj::Mutt, name::Symbol, x)
-    @assert ismutable(obj)
-    setfield!(obj, name, x)
-end
-
-"""
-    branch!(obj::Mutt)
-
-Return a mutable shallow copy of `obj`, whose children are all still immutable.
-"""
-function branch!(obj :: Mutt)
-    branchactions(obj)
-    markimmutable!(obj)
-
-    obj = copy(obj)
-    obj.__mutt_mutable = true
-    obj
 end
 
 end # module
