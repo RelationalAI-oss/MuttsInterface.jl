@@ -22,7 +22,7 @@ TODO
   immutable.
 =#
 
-export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion
+export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion!
 
 """
     abstract type Mutt end
@@ -33,7 +33,7 @@ abstract type Mutt end
 ismutable(obj :: Mutt) = obj.__mutt_mutable
 Base.isimmutable(obj :: Mutt) = !ismutable(obj)
 
-function getmutableversion(obj :: Mutt)
+function getmutableversion!(obj :: Mutt)
     ismutable(obj) ? obj : branch!(obj)
 end
 
@@ -54,7 +54,7 @@ other Tasks, branch! from it, or otherwise share it.
 """
 function markimmutable! end
 
-markimmutable!(a) = nothing
+markimmutable!(a) = a
 
 @generated function markimmutable!(obj :: T) where {T <: Mutt}
     as = map(fieldnames(T)) do sym
@@ -69,7 +69,7 @@ markimmutable!(a) = nothing
             # Then mark this object immutable
             obj.__mutt_mutable = false
         end
-        nothing
+        obj
     end
 end
 
@@ -110,7 +110,7 @@ after which they act like purely immutable types.
 The complete API includes:
  - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
  - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
- - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
+ - [`getmutableversion!(obj)`](@ref): Return a mutable version of `obj`, either
    `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.
