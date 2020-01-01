@@ -13,6 +13,7 @@ Notes
 
 TODO
 
+- Need a LICENSE file for this repo
 - Need some mechanism to ensure that Mutt types can't be shared
   outside the current Task without being marked immutable.
     - Perhaps by injecting a check into `put!(::Channel, ::Mutt)`,
