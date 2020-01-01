@@ -150,7 +150,7 @@ function _mutt_macro(expr)
         # Initialize the new `__mutt_mutable` boolean in the construtors.
         if isempty(def[:constructors])
             # Add the default constructor(s), if none exist, to initialize __mutt_mutable.
-            append!(def[:constructors], default_constructors(def[:name], def[:fields][2:end]))
+            append!(def[:constructors], default_constructors(def[:name], def[:params], def[:fields][2:end]))
         else
             # Inject `true` to initialize __mutt_mutable in `new()` expressions
             def[:constructors] = map(inject_bool_into_constructor!, def[:constructors])
@@ -164,23 +164,37 @@ function _mutt_macro(expr)
    end
 end
 
-function default_constructors(typename, fields)
+function default_constructors(typename, typeparams, fields)
     # TODO: if empty, no bool...?
     typed_args = Tuple(if f[2] == Any f[1] else MacroTools.combinearg(f..., false, nothing) end
                        for f in fields)
     untyped_args = Tuple(f[1] for f in fields)
+    function make_constructor(args, argnames)
+        ps = typeparams
+        if !isempty(ps)
+            full_name = :($typename{$(ps...)})
+            new_expr = :(new{$(ps...)})
+            :(function $full_name($(args...)) where {$(ps...)} ; $new_expr(true, $(argnames...)) end)
+        else
+            :($typename($(args...)) = new(true, $(argnames...)))
+        end
+    end
+    new_expr = :new
     # If none of the args have types, these will be the same.
     if typed_args == untyped_args
-        [:($typename($(typed_args...)) = new(true, $(untyped_args...)))]
+        [make_constructor(untyped_args, untyped_args)]
     else
-        [:($typename($(typed_args...)) = new(true, $(untyped_args...)))
-         :($typename($(untyped_args...)) = new(true, $(untyped_args...)))]
+        [make_constructor(typed_args,   untyped_args),
+         make_constructor(untyped_args, untyped_args)]
     end
 end
 function inject_bool_into_constructor!(constructor)
     function inject_bool_into_new!(expr)
         if @capture(expr, new(args__))
             expr.args = [:new, true, args...]
+            expr
+        elseif @capture(expr, new{T__}(args__))
+            insert!(expr.args, 2, true)
             expr
         else
             expr

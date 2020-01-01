@@ -97,8 +97,20 @@ end
             x :: Int
             y
             WithInnerFunctions(x, y=2) = new(x,y)
+            # keyword arguments constructor
+            WithInnerFunctions(; x=1, y=2) = new(x,y)
             # Custom inner function
             @__MODULE__().make() = new(1,2)
+        end
+        @mutt struct DefaultsWithTypeParams{A,B}
+            x :: A
+            y :: B
+        end
+        @mutt struct CustomWithTypeParams{A,B}
+            x :: A
+            y :: B
+            CustomWithTypeParams() = new{Int,Int}(1,2)
+            CustomWithTypeParams{A,B}(x,y) where {A,B} = new{A,B}(x,y)
         end
     end
     @eval begin
@@ -106,8 +118,14 @@ end
         @test ismutable(NoCustomInner(1,2))
         @test ismutable(WithCustomInners(1,2))
         @test ismutable(WithCustomInners(1))
+
         @test ismutable(WithInnerFunctions(1))
+        @test ismutable(WithInnerFunctions(y=1))
         @test ismutable(make())
+
+        @test ismutable(DefaultsWithTypeParams{Int,String}(1,""))
+        @test ismutable(CustomWithTypeParams())
+        @test ismutable(CustomWithTypeParams{Int,String}(1,""))
     end
 end
 
