@@ -194,7 +194,7 @@ function _mutt_macro(expr)
         # Override setproperty! to prevent mutating a Mutt once it's been marked immutable.
         push!(def[:constructors],
         :(function $Base.setproperty!(obj::$typename, name::Symbol, x)
-            setproperty!(MuttsType(), obj, name, x)
+            setproperty!($MuttsType(), obj, name, x)
         end))
 
         return esc(MacroTools.combinestructdef(def))
