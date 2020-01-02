@@ -49,13 +49,13 @@ struct NonMuttsType end
 # Types are consider non-Mutts by default, and the @mutt macro will create an overload for
 # `mutts_trait(T)` marking them as MuttsType.
 mutts_trait(::Type) = NonMuttsType()
-mutts_trait(v) = mutts_trait(typeof(v))
+mutts_trait(v::T) where T = mutts_trait(T)
 
 
 ismutable(obj::T) where T = ismutable(mutts_trait(T), obj)
 ismutable(::MuttsType, obj) = obj.__mutt_mutable
 
-getmutableversion!(obj) = getmutableversion!(mutts_trait(typeof(obj)), obj)
+getmutableversion!(obj::T) where T = getmutableversion!(mutts_trait(T), obj)
 function getmutableversion!(::MuttsType, obj)
     ismutable(obj) ? obj : branch!(obj)
 end
@@ -77,7 +77,7 @@ other Tasks, branch! from it, or otherwise share it.
 """
 function markimmutable! end
 
-markimmutable!(o) = markimmutable!(mutts_trait(typeof(o)), o)
+markimmutable!(o::T) where T = markimmutable!(mutts_trait(T), o)
 
 markimmutable!(::NonMuttsType, a) = a
 
@@ -103,7 +103,7 @@ end
 
 Return a mutable shallow copy of Mutts object `obj`, whose children are all still immutable.
 """
-branch!(obj) = branch!(mutts_trait(typeof(obj)), obj)
+branch!(obj::T) where T = branch!(mutts_trait(T), obj)
 function branch!(::MuttsType, obj)
     branchactions(obj)
     markimmutable!(obj)
