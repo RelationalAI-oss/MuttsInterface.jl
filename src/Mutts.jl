@@ -21,6 +21,9 @@ TODO
 - Add special casing for empty structs? They are always immutable so don't need the bool..
 - Add check (warning or error?) that all fields of Mutts type must also be either Mutts or
   immutable.
+- Should we autogenerate a `copy()` function for @mutt types?
+- Try out using different runtime types for mutable & immutable versions instead of
+  injecting a boolean: measure performance difference.
 =#
 
 export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion!
