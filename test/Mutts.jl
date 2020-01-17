@@ -3,6 +3,7 @@ module MuttsTest
 using Mutts
 using Test
 using MacroTools
+using IsPurelyImmutable
 
 mutable struct Foo <: Mutt
     x :: Int
@@ -80,15 +81,15 @@ end
             x
         end
         s = S(1)
-        @test !isimmutable(s)
+        @test !is_purely_immutable(s)
         markimmutable!(s)
-        @test isimmutable(s)
+        @test is_purely_immutable(s)
 
         Base.copy(s::S) = S(s.x)
 
         s = S(1)
-        @test !isimmutable(branch!(s))
-        @test isimmutable(s)
+        @test !is_purely_immutable(branch!(s))
+        @test is_purely_immutable(s)
 
         # Assignment from markimmutable! (PR #4)
         s1 = markimmutable!(s)

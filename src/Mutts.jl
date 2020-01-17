@@ -7,6 +7,8 @@ module Mutts
 import MacroTools
 using MacroTools: postwalk, @capture
 
+import IsPurelyImmutable  # To override is_purely_immutable() for Mutts types
+
 #=
 Notes
 
@@ -35,7 +37,10 @@ Types created via `@mutt`. This means they implement the _mutable-until-shared_ 
 abstract type Mutt end
 
 ismutable(obj :: Mutt) = obj.__mutt_mutable
-Base.isimmutable(obj :: Mutt) = !ismutable(obj)
+
+# Mutts objects are considered _purely immutable_ once they've been marked immutable (or
+# branched from, which does this automatically).
+IsPurelyImmutable.is_purely_immutable(obj :: Mutt) = !ismutable(obj)
 
 function getmutableversion!(obj :: Mutt)
     ismutable(obj) ? obj : branch!(obj)
