@@ -28,7 +28,11 @@ TODO
   injecting a boolean: measure performance difference.
 =#
 
-export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion!
+export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion!, is_purely_immutable
+
+# (Assigning to a const makes the name show up in tab-cmplete for this Module)
+const is_purely_immutable = IsPurelyImmutable.is_purely_immutable  # for re-export
+
 
 """
     abstract type Mutt end
