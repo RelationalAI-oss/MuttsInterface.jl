@@ -2,6 +2,8 @@
 
 Mutable Until Shared data structures.
 
+[![Build Status](https://travis-ci.com/RelationalAI-oss/Mutts.jl.svg?branch=master)](https://travis-ci.com/RelationalAI-oss/Mutts.jl)
+
 `Mutts.jl` provides infrastructure for building versioned data structures that follow the
 _mutable-until-shared discipline_, providing all the benefits of purely-functional data
 structures (worry-free, lock-free, super fast concurrency), with the pragmatic programming
