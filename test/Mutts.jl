@@ -4,60 +4,38 @@ using Mutts
 using Test
 using MacroTools
 
-mutable struct Foo <: Mutt
-    x :: Int
-    y :: Int
-    __mutt_mutable :: Bool
-end
-
-Foo(x :: Int, y :: Int) = Foo(x, y, true)
-Foo(f :: Foo) = Foo(f.x, f.y)
-
-f = Foo(3,5)
-@assert ismutable(f)
-f.x = 4
-
-Base.copy(v :: Foo) = Foo(v.x, v.y)
-g = branch!(f)
-@assert !ismutable(f)
-@assert ismutable(g)
-markimmutable!(g)
-
-@assert !ismutable(g)
-
-
-mutable struct Bar <: Mutt
-    f :: Foo
-    z :: Float64
-    __mutt_mutable :: Bool
-end
-
-Bar(f :: Foo, z :: Float64) = Bar(f, z, true)
-Bar(b :: Bar) = Bar(f, z)
-
-
-
-# -- Custom Constructors -------------------
-
-# mutable struct __Inner_Baz
-#     x :: Int
-#     v :: Vector{Int}
-#     #__Inner_Baz(x, v=[]) = new(x,v)
-# end
-# mutable struct Baz <: Mutt
-#     _fields :: __Inner_Baz
-#     __mutt_mutable :: Bool
-#     Baz(x, v=[]) = new(__Inner_Baz(x,v), true)
-# end
+#mutable struct Foo <: Mutt
+#    x :: Int
+#    y :: Int
+#    __mutt_mutable :: Bool
+#end
 #
-# Baz(2)
+#Foo(x :: Int, y :: Int) = Foo(x, y, true)
+#Foo(f :: Foo) = Foo(f.x, f.y)
 #
-# Base.getproperty(x::Baz, f::Symbol) = getproperty(getfield(x,:_fields), f)
-# Base.setproperty!(x::Baz, f::Symbol, v) = setproperty!(getfield(x,:_fields), f, v)
+#f = Foo(3,5)
+#@assert ismutable(f)
+#f.x = 4
 #
-# Baz(2)._fields
+#Base.copy(v :: Foo) = Foo(v.x, v.y)
+#g = branch!(f)
+#@assert !ismutable(f)
+#@assert ismutable(g)
+#markimmutable!(g)
+#
+#@assert !ismutable(g)
 
-# -----------------------------
+
+#mutable struct Bar <: Mutt
+#    f :: Foo
+#    z :: Float64
+#    __mutt_mutable :: Bool
+#end
+#
+#Bar(f :: Foo, z :: Float64) = Bar(f, z, true)
+#Bar(b :: Bar) = Bar(f, z)
+#
+#
 
 # Mutts macro expansion
 
@@ -80,15 +58,15 @@ end
             x
         end
         s = S(1)
-        @test !isimmutable(s)
+        @test ismutable(s)
         markimmutable!(s)
-        @test isimmutable(s)
+        @test !ismutable(s)
 
         Base.copy(s::S) = S(s.x)
 
         s = S(1)
-        @test !isimmutable(branch!(s))
-        @test isimmutable(s)
+        @test ismutable(branch!(s))
+        @test !ismutable(s)
 
         # Assignment from markimmutable! (PR #4)
         s1 = markimmutable!(s)
@@ -96,6 +74,16 @@ end
     end
 end
 
+@mutt struct M
+    x
+end
+@testset "Can't modify immutable Mutts" begin
+    m = M(1)
+    m.x = 2
+    @test m.x == 2
+    markimmutable!(m)
+    @test_throws Exception m.x = 3
+end
 
 @testset "Inner constructors" begin
     # (eval required to create structs inside a Testset)
@@ -148,6 +136,22 @@ end
         @test ismutable(DefaultsWithTypeParams{Int,String}(1,""))
         @test ismutable(CustomWithTypeParams())
         @test ismutable(CustomWithTypeParams{Int,String}(1,""))
+    end
+end
+
+@testset "structs with supertypes" begin
+    @eval begin
+        @mutt struct MuttsFloat <: AbstractFloat
+            v :: Float64
+        end
+        @test MuttsFloat <: AbstractFloat
+        v = MuttsFloat(2.0)
+        @test v isa AbstractFloat
+
+        v.v = 3.0
+        @test v.v == 3.0
+        markimmutable!(v)
+        @test_throws Exception v.v = 4.0
     end
 end
 
