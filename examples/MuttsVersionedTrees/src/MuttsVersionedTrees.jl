@@ -71,11 +71,6 @@ Base.convert(::Type{VTree{T}}, ::Nothing) where T = EmptyVTree{T}()
 VTree{T}() where T = EmptyVTree{T}()
 VTree{T}(x, args...; kwargs...) where T = VTreeNode{T}(x, args...; kwargs...)
 
-VTreeNode{Int}(2)
-VTree{Int}(2)
-VTree{Int}(2, left=VTreeNode{Int}(1))
-VTree{Int}(2, nothing, VTreeNode{Int}(10))
-
 AbstractTrees.children(v::EmptyVTree{T}) where T = VTree{T}[]
 function AbstractTrees.children(v::VTreeNode)
     if (v.left isa EmptyVTree && v.right isa EmptyVTree)
@@ -90,8 +85,6 @@ function AbstractTrees.printnode(io::IO, v::VTreeNode{T}) where T
 end
 
 Base.show(io::IO, v::VTree) = AbstractTrees.print_tree(io, v)
-
-VTreeNode{Int}(10, VTreeNode{Int}(0), VTreeNode{Int}(100))
 
 # ----- Copy needed for Mutts.branch!() ---------------
 Base.copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
