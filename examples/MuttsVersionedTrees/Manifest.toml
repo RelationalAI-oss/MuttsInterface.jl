@@ -38,7 +38,7 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[Mutts]]
 deps = ["MacroTools"]
-path = ".."
+path = "../.."
 uuid = "4f105e01-9b18-47b8-92a3-3fae8366c3d5"
 version = "0.1.0"
 
