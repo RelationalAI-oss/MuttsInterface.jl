@@ -10,9 +10,14 @@ using MacroTools: postwalk, @capture
 #=
 Notes
 
+- I've removed the `Base.isimmutable` overload, since I _think_ that's referring to
+  specifically the julia "immutable struct" meaning. It may break things to "lie" about
+  this. Also, if we do want to support this, we'd have to add an overload for each type
+  (exactly like what was done for setproperty!).
 
 TODO
 
+- Need a LICENSE file for this repo
 - Need some mechanism to ensure that Mutt types can't be shared
   outside the current Task without being marked immutable.
     - Perhaps by injecting a check into `put!(::Channel, ::Mutt)`,
@@ -20,43 +25,66 @@ TODO
 - Add special casing for empty structs? They are always immutable so don't need the bool..
 - Add check (warning or error?) that all fields of Mutts type must also be either Mutts or
   immutable.
+- Should we autogenerate a `copy()` function for @mutt types?
+- Try out using different runtime types for mutable & immutable versions instead of
+  injecting a boolean: measure performance difference.
 =#
 
-export Mutt, @mutt, branch!, ismutable, markimmutable!, getmutableversion!
+export @mutt, ismuttstype, branch!, ismutable, markimmutable!, getmutableversion!
 
 """
-    abstract type Mutt end
-Types created via `@mutt`. This means they implement the _mutable-until-shared_ discipline.
+    ismuttstype(t::Type) -> Bool
+
+Returns true if type `t` was created via the `@mutt` macro, meaning it is a Mutable Til
+Shared type, and implements the _mutable-until-shared_ discipline. These types start out
+mutable, and can be saved in a frozen version via `markimmutable!` and `branch!`.
 """
-abstract type Mutt end
+ismuttstype(t::Type) = mutts_trait(t) == MuttsType()
 
-ismutable(obj :: Mutt) = obj.__mutt_mutable
-Base.isimmutable(obj :: Mutt) = !ismutable(obj)
+# --- Trait dispatch for Mutt types -----------------------
+# Since Mutts types don't inherit from a common abstract type (to allow them to inherit
+# from their own base types, e.g. AbstractDict), we use trait-inheritance to write functions
+# that want different methods for Mutts and non-Mutts types.
+# (For more on Traits in Julia ("Holy Traits"), see this blog post):
+# https://invenia.github.io/blog/2019/11/06/julialang-features-part-2/
+struct MuttsType end
+struct NonMuttsType end
+# Types are consider non-Mutts by default, and the @mutt macro will create an overload for
+# `mutts_trait(T)` marking them as MuttsType.
+mutts_trait(::Type) = NonMuttsType()
+mutts_trait(v::T) where T = mutts_trait(T)
 
-function getmutableversion!(obj :: Mutt)
+
+ismutable(obj::T) where T = ismutable(mutts_trait(T), obj)
+ismutable(::MuttsType, obj) = obj.__mutt_mutable
+
+getmutableversion!(obj::T) where T = getmutableversion!(mutts_trait(T), obj)
+function getmutableversion!(::MuttsType, obj)
     ismutable(obj) ? obj : branch!(obj)
 end
 
 """
-    branchactions(obj :: Mutt) = nothing
+    branchactions(obj) = nothing
 
 This callback function is called immediately before a Mutt object is branched from (even if
 it was already immutable). Users can add methods to this callback to perform arbitrary
 actions right before an object is branched.
 """
-branchactions(obj :: Mutt) = nothing
+branchactions(obj) = nothing
 
 """
-    markimmutable!(obj::Mutt)
+    markimmutable!(obj)
 
 Freeeze `obj` from further mutations, making it eligible to pass to
 other Tasks, branch! from it, or otherwise share it.
 """
 function markimmutable! end
 
-markimmutable!(a) = a
+markimmutable!(o::T) where T = markimmutable!(mutts_trait(T), o)
 
-@generated function markimmutable!(obj :: T) where {T <: Mutt}
+markimmutable!(::NonMuttsType, a) = a
+
+@generated function markimmutable!(::MuttsType, obj :: T) where T
     as = map(fieldnames(T)) do sym
         :( markimmutable!(getfield(obj, $(QuoteNode(sym)))) )
     end
@@ -73,24 +101,28 @@ markimmutable!(a) = a
     end
 end
 
-# Override setproperty! to prevent mutating a Mutt once it's been marked immutable.
-function Base.setproperty!(obj::Mutt, name::Symbol, x)
-    @assert ismutable(obj)
-    setfield!(obj, name, x)
-end
-
 """
-    branch!(obj::Mutt)
+    branch!(obj)
 
-Return a mutable shallow copy of `obj`, whose children are all still immutable.
+Return a mutable shallow copy of Mutts object `obj`, whose children are all still immutable.
 """
-function branch!(obj :: Mutt)
+branch!(obj::T) where T = branch!(mutts_trait(T), obj)
+function branch!(::MuttsType, obj)
     branchactions(obj)
     markimmutable!(obj)
 
     obj = copy(obj)
     obj.__mutt_mutable = true
     obj
+end
+
+
+# Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt
+# once it's been marked immutable.
+# NOTE: The @mutt macro will overload setproperty!(obj::T, name, x) to call this method.
+function Base.setproperty!(::MuttsType, obj, name::Symbol, x)
+    @assert ismutable(obj)
+    setfield!(obj, name, x)
 end
 
 
@@ -143,6 +175,7 @@ end
 function _mutt_macro(expr)
     if MacroTools.isstructdef(expr)
         def = MacroTools.splitstructdef(expr)
+        typename = def[:name]
         # Mutts structs are julia-mutable
         def[:mutable] = true
         # Add `__mutt_mutable` field to the struct.
@@ -152,13 +185,20 @@ function _mutt_macro(expr)
         # Initialize the new `__mutt_mutable` boolean in the construtors.
         if isempty(def[:constructors])
             # Add the default constructor(s), if none exist, to initialize __mutt_mutable.
-            append!(def[:constructors], default_constructors(def[:name], def[:params], def[:fields][2:end]))
+            append!(def[:constructors], default_constructors(typename, def[:params], def[:fields][2:end]))
         else
             # Inject `true` to initialize __mutt_mutable in `new()` expressions
             def[:constructors] = map(inject_bool_into_constructor!, def[:constructors])
         end
-        # Make this type a Mutt.
-        def[:supertype] = Mutt  # TODO: make this a trait instead
+        # Mark this type as a Mutt (Register with the trait dispatch).
+        push!(def[:constructors],
+              # (Note the <:T which covers the case where T is paramaterized)
+              :($(@__MODULE__).mutts_trait(::Type{<:$typename}) = $MuttsType()))
+        # Override setproperty! to prevent mutating a Mutt once it's been marked immutable.
+        push!(def[:constructors],
+        :(function $Base.setproperty!(obj::$typename, name::Symbol, x)
+            setproperty!($MuttsType(), obj, name, x)
+        end))
 
         return esc(MacroTools.combinestructdef(def))
    else
