@@ -1,14 +1,11 @@
 
 module MuttsVersionedTrees
 
-using Mutts
-using AbstractTrees  # For printing
-
-const insert!, delete! = Base.insert!, Base.delete!  # For export
+const insert!, delete! = Base.insert!, Base.delete!
 export VTree, insert!, delete!
 
-const markimmutable! = Mutts.markimmutable!  # For export
-export markimmutable!  # From Mutts
+using Mutts
+using AbstractTrees  # For printing
 
 """
     VTree{T}(value; left = nothing, right = nothing)
@@ -16,23 +13,24 @@ export markimmutable!  # From Mutts
 A versioned, mutable until shared binary branching tree.
 
 ```jldoctest
-julia> begin
-           head = VTree{Int}()
-           # Insert elements
-           head = insert!(head, 5);
-           head = insert!(head, 1);
-           head = insert!(head, 10);
-           head = insert!(head, 2);
-           # Print
-           println(head)
-           # Freeze `head` -- ready to share to other threads.
-           markimmutable!(head)
-           println(head)
-           # Keep branching from head
-           head = insert!(head, 7);
-           head = delete!(head, 1);
-           println(head)
-       end
+head = VTree{Int}()
+
+head = insert!(head, 5);
+head = insert!(head, 1);
+head = insert!(head, 10);
+head = insert!(head, 2);
+
+println(head)
+
+markimmutable!(head)
+println(head)
+
+head = insert!(head, 7);
+head = delete!(head, 1);
+println(head)
+
+# output
+
 VTreeNode{Int64}(5) ✔︎
 ├─ VTreeNode{Int64}(1) ✔︎
 │  ├─ ∅
@@ -50,7 +48,6 @@ VTreeNode{Int64}(5) ✔︎
 └─ VTreeNode{Int64}(10) ✔︎
    ├─ VTreeNode{Int64}(7) ✔︎
    └─ ∅
-
 ```
 """
 VTree
@@ -122,8 +119,8 @@ julia> head1
 VTreeNode{Int64}(5) 🔒
 ├─ VTreeNode{Int64}(1) 🔒
 └─ VTreeNode{Int64}(10) 🔒
-   ├─ VTreeNode{Int64}(7) 🔒
-   └─ ∅
+  ├─ VTreeNode{Int64}(7) 🔒
+  └─ ∅
 ```
 """
 Base.insert!(::EmptyVTree{T}, x) where T = VTreeNode{T}(x)
@@ -154,8 +151,6 @@ Return a new VTree with `value` deleted from the sorted tree `head`, mutating it
 possible, or returning a new branched copy if needed.
 
 ```jldoctest
-julia> head = head2;  # Starting with a different example tree
-
 julia> head1 = markimmutable!(head)  # Store backup of head
 VTreeNode{Int64}(5) 🔒
 ├─ VTreeNode{Int64}(1) 🔒

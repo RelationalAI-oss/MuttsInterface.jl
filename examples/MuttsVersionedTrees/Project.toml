@@ -1,3 +1,15 @@
+name = "MuttsVersionedTrees"
+uuid = "562268d1-c4be-4284-a85a-668a8716c6ac"
+authors = ["Nathan Daly <nathan.daly@relational.ai"]
+version = "0.1.0"
+
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 Mutts = "4f105e01-9b18-47b8-92a3-3fae8366c3d5"
+
+[extras]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Documenter", "Test"]
