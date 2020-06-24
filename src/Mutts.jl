@@ -30,7 +30,7 @@ TODO
   injecting a boolean: measure performance difference.
 =#
 
-export @mutt, ismuttstype, branch!, ismutable, markimmutable!, getmutableversion!
+export @mutt, ismuttstype, branch!, ismutable, markimmutable!, getmutableversion
 
 """
     ismuttstype(t::Type) -> Bool
@@ -58,8 +58,8 @@ mutts_trait(v::T) where T = mutts_trait(T)
 ismutable(obj::T) where T = ismutable(mutts_trait(T), obj)
 ismutable(::MuttsType, obj) = obj.__mutt_mutable
 
-getmutableversion!(obj::T) where T = getmutableversion!(mutts_trait(T), obj)
-function getmutableversion!(::MuttsType, obj)
+getmutableversion(obj::T) where T = getmutableversion(mutts_trait(T), obj)
+function getmutableversion(::MuttsType, obj)
     ismutable(obj) ? obj : branch!(obj)
 end
 
@@ -142,7 +142,7 @@ after which they act like purely immutable types.
 The complete API includes:
  - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
  - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
- - [`getmutableversion!(obj)`](@ref): Return a mutable version of `obj`, either
+ - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
    `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.

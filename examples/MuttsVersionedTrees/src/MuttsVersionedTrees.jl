@@ -128,7 +128,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.insert!(::EmptyVTree{T}, x) where T = VTreeNode{T}(x)
 function Base.insert!(head::VTreeNode{T}, x) where T
-    head = getmutableversion!(head)
+    head = getmutableversion(head)
 
     if x <= head.value
         if head.left isa EmptyVTree
@@ -191,7 +191,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.delete!(e::EmptyVTree, _) = e
 function Base.delete!(head::VTreeNode, x)
-    head = getmutableversion!(head)
+    head = getmutableversion(head)
 
     if x == head.value
         if head.left isa EmptyVTree
@@ -215,7 +215,7 @@ end
 # Used in delete!, above
 _pop_leftmost!(head::EmptyVTree) = head
 function _pop_leftmost!(head::VTreeNode)
-    head = getmutableversion!(head)
+    head = getmutableversion(head)
 
     if head.left isa EmptyVTree
         popped_val = head.value
