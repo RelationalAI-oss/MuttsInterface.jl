@@ -21,12 +21,12 @@ using Documenter
         
             println(head)
         
-            markimmutable!(head)
+            mark_immutable!(head)
         
             head = insert!(head, 7);
             head = delete!(head, 2);
         
-            markimmutable!(head)
+            mark_immutable!(head)
             head2 = branch!(head)
         
             head2 = insert!(head2, 2);

@@ -127,7 +127,7 @@ function branch!(::MuttsType, obj)
 end
 
 function make_mutable_copy(obj)
-    @warn "Implement some version of this for your type."
+    @warn "Implement some version of `make_mutable_copy` for your type."
     error()
 end
 # Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt

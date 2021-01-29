@@ -22,7 +22,7 @@ head = insert!(head, 2);
 
 println(head)
 
-markimmutable!(head)
+mark_immutable!(head)
 println(head)
 
 head = insert!(head, 7);
@@ -80,15 +80,16 @@ function AbstractTrees.children(v::VTreeNode)
     end
 end
 function AbstractTrees.printnode(io::IO, v::VTreeNode{T}) where T
-    mutable_emoji = ismutable(v) ? "✔︎" : "🔒"
+    mutable_emoji = is_mutable(v) ? "✔︎" : "🔒"
     print(io,"VTreeNode{$T}($(v.value)) $mutable_emoji")
 end
 
 Base.show(io::IO, v::VTree) = AbstractTrees.print_tree(io, v)
 
 # ----- Copy needed for Mutts.branch!() ---------------
-Base.copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
-Base.copy(v::VTreeNode{T}) where T = VTreeNode{T}(v.value, v.left, v.right)
+import Mutts.make_mutable_copy
+Mutts.make_mutable_copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
+Mutts.make_mutable_copy(v::VTreeNode{T}) where T = VTreeNode{T}(v.value, v.left, v.right)
 
 # --- Insert! -----------------
 """
@@ -98,7 +99,7 @@ Return a new VTree with `value` inserted into the sorted tree `head`, mutating i
 possible, or returning a new branched copy if needed.
 
 ```jldoctest
-julia> head1 = markimmutable!(head)  # Store backup of head
+julia> head1 = mark_immutable!(head)  # Store backup of head
 VTreeNode{Int64}(5) 🔒
 ├─ VTreeNode{Int64}(1) 🔒
 └─ VTreeNode{Int64}(10) 🔒
@@ -125,7 +126,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.insert!(::EmptyVTree{T}, x) where T = VTreeNode{T}(x)
 function Base.insert!(head::VTreeNode{T}, x) where T
-    head = getmutableversion(head)
+    head = get_mutable_version(head)
 
     if x <= head.value
         if head.left isa EmptyVTree
@@ -151,7 +152,7 @@ Return a new VTree with `value` deleted from the sorted tree `head`, mutating it
 possible, or returning a new branched copy if needed.
 
 ```jldoctest
-julia> head1 = markimmutable!(head)  # Store backup of head
+julia> head1 = mark_immutable!(head)  # Store backup of head
 VTreeNode{Int64}(5) 🔒
 ├─ VTreeNode{Int64}(1) 🔒
 │  ├─ ∅
@@ -186,7 +187,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.delete!(e::EmptyVTree, _) = e
 function Base.delete!(head::VTreeNode, x)
-    head = getmutableversion(head)
+    head = get_mutable_version(head)
 
     if x == head.value
         if head.left isa EmptyVTree
@@ -210,7 +211,7 @@ end
 # Used in delete!, above
 _pop_leftmost!(head::EmptyVTree) = head
 function _pop_leftmost!(head::VTreeNode)
-    head = getmutableversion(head)
+    head = get_mutable_version(head)
 
     if head.left isa EmptyVTree
         popped_val = head.value
