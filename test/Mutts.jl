@@ -61,8 +61,8 @@ end
         @test is_mutable(s)
         mark_immutable!(s)
         @test !is_mutable(s)
-
-        Base.copy(s::S) = S(s.x)
+        import Mutts.make_mutable_copy
+        Mutts.make_mutable_copy(s::S) = S(s.x)
 
         s = S(1)
         @test is_mutable(branch!(s))

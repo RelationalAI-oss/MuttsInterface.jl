@@ -60,7 +60,7 @@ is_mutable(::MuttsType, obj) = obj.__mutt_mutable
 
 get_mutable_version(obj::T) where T = get_mutable_version(mutts_trait(T), obj)
 function get_mutable_version(::MuttsType, obj)
-    ismutable(obj) ? obj : branch!(obj)
+    is_mutable(obj) ? obj : branch!(obj)
 end
 
 """
@@ -126,12 +126,15 @@ function branch!(::MuttsType, obj)
     obj
 end
 
-
+function make_mutable_copy(obj)
+    @warn "Implement some version of this for your type."
+    error()
+end
 # Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt
 # once it's been marked immutable.
 # NOTE: The @mutt macro will overload setproperty!(obj::T, name, x) to call this method.
 function Base.setproperty!(::MuttsType, obj, name::Symbol, x)
-    @assert ismutable(obj)
+    @assert is_mutable(obj)
     setfield!(obj, name, x)
 end
 
