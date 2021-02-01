@@ -121,9 +121,7 @@ function branch!(::MuttsType, obj)
     branchactions(obj)
     mark_immutable!(obj)
 
-    obj = make_mutable_copy(obj)
-    #obj.__mutt_mutable = true
-    obj
+    return make_mutable_copy(obj)
 end
 
 function make_mutable_copy end
