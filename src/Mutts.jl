@@ -126,10 +126,7 @@ function branch!(::MuttsType, obj)
     obj
 end
 
-function make_mutable_copy(obj)
-    @warn "Implement some version of `make_mutable_copy` for your type."
-    error()
-end
+function make_mutable_copy end
 # Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt
 # once it's been marked immutable.
 # NOTE: The @mutt macro will overload setproperty!(obj::T, name, x) to call this method.
