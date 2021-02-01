@@ -30,16 +30,16 @@ TODO
   injecting a boolean: measure performance difference.
 =#
 
-export @mutt, ismuttstype, branch!, is_mutts_mutable, mark_immutable!, mutable_version
+export @mutt, is_mutts_type, branch!, is_mutts_mutable, mark_immutable!, mutable_version
 
 """
-    ismuttstype(t::Type) -> Bool
+    is_mutts_type(t::Type) -> Bool
 
 Returns true if type `t` was created via the `@mutt` macro, meaning it is a Mutable Til
 Shared type, and implements the _mutable-until-shared_ discipline. These types start out
 mutable, and can be saved in a frozen version via `mark_immutable!` and `branch!`.
 """
-ismuttstype(t::Type) = mutts_trait(t) == MuttsType()
+is_mutts_type(t::Type) = mutts_trait(t) == MuttsType()
 
 # --- Trait dispatch for Mutt types -----------------------
 # Since Mutts types don't inherit from a common abstract type (to allow them to inherit
