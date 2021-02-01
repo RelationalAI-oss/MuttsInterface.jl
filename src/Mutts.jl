@@ -30,7 +30,7 @@ TODO
   injecting a boolean: measure performance difference.
 =#
 
-export @mutt, ismuttstype, branch!, is_mutable, mark_immutable!, get_mutable_version
+export @mutt, ismuttstype, branch!, is_mutts_mutable, mark_immutable!, mutable_version
 
 """
     ismuttstype(t::Type) -> Bool
@@ -55,12 +55,12 @@ mutts_trait(::Type) = NonMuttsType()
 mutts_trait(v::T) where T = mutts_trait(T)
 
 
-is_mutable(obj::T) where T = is_mutable(mutts_trait(T), obj)
-is_mutable(::MuttsType, obj) = obj.__mutt_mutable
+is_mutts_mutable(obj::T) where T = is_mutts_mutable(mutts_trait(T), obj)
+is_mutts_mutable(::MuttsType, obj) = obj.__mutt_mutable
 
-get_mutable_version(obj::T) where T = get_mutable_version(mutts_trait(T), obj)
-function get_mutable_version(::MuttsType, obj)
-    is_mutable(obj) ? obj : branch!(obj)
+mutable_version(obj::T) where T = mutable_version(mutts_trait(T), obj)
+function mutable_version(::MuttsType, obj)
+    is_mutts_mutable(obj) ? obj : branch!(obj)
 end
 
 """
@@ -75,7 +75,7 @@ branchactions(obj) = nothing
 """
     mark_immutable!(obj)
 
-Freeeze `obj` from further mutations, making it eligible to pass to
+Freeze `obj` from further mutations, making it eligible to pass to
 other Tasks, branch! from it, or otherwise share it.
 """
 function mark_immutable! end
@@ -90,26 +90,26 @@ mark_immutable!(::NonMuttsType, a) = a
     end
 
     return quote
-        if is_mutable(obj)
+        if is_mutts_mutable(obj)
             # Mark all Mutt fields immutable
             $(as...)
 
             # Then mark this object immutable
-            flag_immutable!(obj)
+            set_immutable_flag!(obj)
         end
         obj
     end
 end
 
 """
-    flag_immutable!(obj)
+    set_immutable_flag!(obj)
 
 For `MuttsTypes`, sets the `__mutt_mutable` property to `false`. Write a method
-for your type with signature `flag_immutable!(::MuttsType, o::YourType)` if your
+for your type with signature `set_immutable_flag!(::MuttsType, o::YourType)` if your
 type does not have the `__mutt_mutable` property.
 """
-flag_immutable!(o::T) where T = flag_immutable!(mutts_trait(T), o)
-flag_immutable!(::MuttsType, o) = o.__mutt_mutable = false
+set_immutable_flag!(o::T) where T = set_immutable_flag!(mutts_trait(T), o)
+set_immutable_flag!(::MuttsType, o) = o.__mutt_mutable = false
 
 """
     branch!(obj)
@@ -126,15 +126,12 @@ function branch!(::MuttsType, obj)
     obj
 end
 
-function make_mutable_copy(obj)
-    @warn "Implement some version of `make_mutable_copy` for your type."
-    error()
-end
+function make_mutable_copy end
 # Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt
 # once it's been marked immutable.
 # NOTE: The @mutt macro will overload setproperty!(obj::T, name, x) to call this method.
 function Base.setproperty!(::MuttsType, obj, name::Symbol, x)
-    @assert is_mutable(obj)
+    @assert is_mutts_mutable(obj)
     setfield!(obj, name, x)
 end
 
@@ -155,7 +152,7 @@ after which they act like purely immutable types.
 The complete API includes:
  - [`mark_immutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
  - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
- - [`get_mutable_version(obj)`](@ref): Return a mutable version of `obj`, either
+ - [`mutable_version(obj)`](@ref): Return a mutable version of `obj`, either
    `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.
