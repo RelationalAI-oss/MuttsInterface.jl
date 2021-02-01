@@ -83,7 +83,7 @@ function AbstractTrees.children(v::VTreeNode)
     end
 end
 function AbstractTrees.printnode(io::IO, v::VTreeNode{T}) where T
-    mutable_emoji = is_mutable(v) ? "✔︎" : "🔒"
+    mutable_emoji = is_mutts_mutable(v) ? "✔︎" : "🔒"
     print(io,"VTreeNode{$T}($(v.value)) $mutable_emoji")
 end
 
@@ -129,7 +129,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.insert!(::EmptyVTree{T}, x) where T = VTreeNode{T}(x)
 function Base.insert!(head::VTreeNode{T}, x) where T
-    head = get_mutable_version(head)
+    head = mutable_version(head)
 
     if x <= head.value
         if head.left isa EmptyVTree
@@ -192,7 +192,7 @@ VTreeNode{Int64}(5) 🔒
 """
 Base.delete!(e::EmptyVTree, _) = e
 function Base.delete!(head::VTreeNode, x)
-    head = get_mutable_version(head)
+    head = mutable_version(head)
 
     if x == head.value
         if head.left isa EmptyVTree
@@ -216,7 +216,7 @@ end
 # Used in delete!, above
 _pop_leftmost!(head::EmptyVTree) = head
 function _pop_leftmost!(head::VTreeNode)
-    head = get_mutable_version(head)
+    head = mutable_version(head)
 
     if head.left isa EmptyVTree
         popped_val = head.value

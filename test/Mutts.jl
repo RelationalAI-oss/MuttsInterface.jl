@@ -14,16 +14,16 @@ using MacroTools
 #Foo(f :: Foo) = Foo(f.x, f.y)
 #
 #f = Foo(3,5)
-#@assert is_mutable(f)
+#@assert is_mutts_mutable(f)
 #f.x = 4
 #
 #Base.copy(v :: Foo) = Foo(v.x, v.y)
 #g = branch!(f)
-#@assert !is_mutable(f)
-#@assert is_mutable(g)
+#@assert !is_mutts_mutable(f)
+#@assert is_mutts_mutable(g)
 #mark_immutable!(g)
 #
-#@assert !is_mutable(g)
+#@assert !is_mutts_mutable(g)
 
 
 #mutable struct Bar <: Mutt
@@ -58,15 +58,15 @@ end
             x
         end
         s = S(1)
-        @test is_mutable(s)
+        @test is_mutts_mutable(s)
         mark_immutable!(s)
-        @test !is_mutable(s)
+        @test !is_mutts_mutable(s)
         import Mutts.make_mutable_copy
         Mutts.make_mutable_copy(s::S) = S(s.x)
 
         s = S(1)
-        @test is_mutable(branch!(s))
-        @test !is_mutable(s)
+        @test is_mutts_mutable(branch!(s))
+        @test !is_mutts_mutable(s)
 
         # Assignment from mark_immutable! (PR #4)
         s1 = mark_immutable!(s)
@@ -124,18 +124,18 @@ end
         end
     end
     @eval begin
-        @test is_mutable(SimpleFields(1,2))
-        @test is_mutable(NoCustomInner(1,2))
-        @test is_mutable(WithCustomInners(1,2))
-        @test is_mutable(WithCustomInners(1))
+        @test is_mutts_mutable(SimpleFields(1,2))
+        @test is_mutts_mutable(NoCustomInner(1,2))
+        @test is_mutts_mutable(WithCustomInners(1,2))
+        @test is_mutts_mutable(WithCustomInners(1))
 
-        @test is_mutable(WithInnerFunctions(1))
-        @test is_mutable(WithInnerFunctions(y=1))
-        @test is_mutable(make())
+        @test is_mutts_mutable(WithInnerFunctions(1))
+        @test is_mutts_mutable(WithInnerFunctions(y=1))
+        @test is_mutts_mutable(make())
 
-        @test is_mutable(DefaultsWithTypeParams{Int,String}(1,""))
-        @test is_mutable(CustomWithTypeParams())
-        @test is_mutable(CustomWithTypeParams{Int,String}(1,""))
+        @test is_mutts_mutable(DefaultsWithTypeParams{Int,String}(1,""))
+        @test is_mutts_mutable(CustomWithTypeParams())
+        @test is_mutts_mutable(CustomWithTypeParams{Int,String}(1,""))
     end
 end
 
