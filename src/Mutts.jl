@@ -84,7 +84,7 @@ mark_immutable!(o::T) where T = mark_immutable!(mutts_trait(T), o)
 
 mark_immutable!(::NonMuttsType, a) = a
 
-@generated function mark_immutable!(::MuttsType, obj :: T) where T
+@generated function mark_immutable!(::MuttsType, obj::T) where T
     as = map(fieldnames(T)) do sym
         :( mark_immutable!(getfield(obj, $(QuoteNode(sym)))) )
     end
@@ -256,4 +256,3 @@ function inject_bool_into_constructor!(constructor)
 end
 
 end # module
-
