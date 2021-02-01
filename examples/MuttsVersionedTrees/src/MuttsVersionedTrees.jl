@@ -90,7 +90,6 @@ end
 Base.show(io::IO, v::VTree) = AbstractTrees.print_tree(io, v)
 
 # ----- Copy needed for Mutts.branch!() ---------------
-import Mutts.make_mutable_copy
 Mutts.make_mutable_copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
 Mutts.make_mutable_copy(v::VTreeNode{T}) where T = VTreeNode{T}(v.value, v.left, v.right)
 
