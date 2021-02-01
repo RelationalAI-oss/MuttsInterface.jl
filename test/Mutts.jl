@@ -61,7 +61,6 @@ end
         @test is_mutts_mutable(s)
         mark_immutable!(s)
         @test !is_mutts_mutable(s)
-        import Mutts.make_mutable_copy
         Mutts.make_mutable_copy(s::S) = S(s.x)
 
         s = S(1)
