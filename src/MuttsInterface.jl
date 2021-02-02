@@ -1,8 +1,8 @@
 """
-    module Mutts
+    module MuttsInterface
 Explorations of a mutable-until-shared discipline in Julia. (MUTable 'Til Shared)
 """
-module Mutts
+module MuttsInterface
 
 import MacroTools
 using MacroTools: postwalk, @capture

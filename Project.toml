@@ -1,4 +1,4 @@
-name = "Mutts"
+name = "MuttsInterface"
 uuid = "4f105e01-9b18-47b8-92a3-3fae8366c3d5"
 authors = ["Todd J. Green <todd.green@relational.ai>", "Nathan Daly <nathan.daly@relational.ai>", "Joe Miller <joe.miller@relational.ai>"]
 version = "0.1.0"
@@ -8,6 +8,7 @@ MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 
 [compat]
 MacroTools = "0.5"
+julia = "1.0"
 
 [extras]
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"

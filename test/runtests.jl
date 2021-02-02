@@ -1,7 +1,7 @@
 using Test
 
-@testset "Mutts.jl" begin
-    include("Mutts.jl")
+@testset "MuttsInterface.jl" begin
+    include("MuttsInterface.jl")
 end
 
 # -----------------------------------------------------------
