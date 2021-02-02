@@ -33,5 +33,5 @@ julia> s
 S(false, 3)
 
 julia> s.x = 4
-ERROR: AssertionError: ismutable(obj)
+ERROR: AssertionError: is_mutable(obj)
 ```

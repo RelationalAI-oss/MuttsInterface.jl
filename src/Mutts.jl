@@ -30,16 +30,16 @@ TODO
   injecting a boolean: measure performance difference.
 =#
 
-export @mutt, ismuttstype, branch!, ismutable, markimmutable!, getmutableversion
+export @mutt, is_mutts_type, branch!, is_mutts_mutable, mark_immutable!, mutable_version
 
 """
-    ismuttstype(t::Type) -> Bool
+    is_mutts_type(t::Type) -> Bool
 
 Returns true if type `t` was created via the `@mutt` macro, meaning it is a Mutable Til
 Shared type, and implements the _mutable-until-shared_ discipline. These types start out
-mutable, and can be saved in a frozen version via `markimmutable!` and `branch!`.
+mutable, and can be saved in a frozen version via `mark_immutable!` and `branch!`.
 """
-ismuttstype(t::Type) = mutts_trait(t) == MuttsType()
+is_mutts_type(t::Type) = mutts_trait(t) == MuttsType()
 
 # --- Trait dispatch for Mutt types -----------------------
 # Since Mutts types don't inherit from a common abstract type (to allow them to inherit
@@ -55,12 +55,12 @@ mutts_trait(::Type) = NonMuttsType()
 mutts_trait(v::T) where T = mutts_trait(T)
 
 
-ismutable(obj::T) where T = ismutable(mutts_trait(T), obj)
-ismutable(::MuttsType, obj) = obj.__mutt_mutable
+is_mutts_mutable(obj::T) where T = is_mutts_mutable(mutts_trait(T), obj)
+is_mutts_mutable(::MuttsType, obj) = obj.__mutt_mutable
 
-getmutableversion(obj::T) where T = getmutableversion(mutts_trait(T), obj)
-function getmutableversion(::MuttsType, obj)
-    ismutable(obj) ? obj : branch!(obj)
+mutable_version(obj::T) where T = mutable_version(mutts_trait(T), obj)
+function mutable_version(::MuttsType, obj)
+    is_mutts_mutable(obj) ? obj : branch!(obj)
 end
 
 """
@@ -73,33 +73,43 @@ actions right before an object is branched.
 branchactions(obj) = nothing
 
 """
-    markimmutable!(obj)
+    mark_immutable!(obj)
 
-Freeeze `obj` from further mutations, making it eligible to pass to
+Freeze `obj` from further mutations, making it eligible to pass to
 other Tasks, branch! from it, or otherwise share it.
 """
-function markimmutable! end
+function mark_immutable! end
 
-markimmutable!(o::T) where T = markimmutable!(mutts_trait(T), o)
+mark_immutable!(o::T) where T = mark_immutable!(mutts_trait(T), o)
 
-markimmutable!(::NonMuttsType, a) = a
+mark_immutable!(::NonMuttsType, a) = a
 
-@generated function markimmutable!(::MuttsType, obj :: T) where T
+@generated function mark_immutable!(::MuttsType, obj::T) where T
     as = map(fieldnames(T)) do sym
-        :( markimmutable!(getfield(obj, $(QuoteNode(sym)))) )
+        :( mark_immutable!(getfield(obj, $(QuoteNode(sym)))) )
     end
 
     return quote
-        if ismutable(obj)
+        if is_mutts_mutable(obj)
             # Mark all Mutt fields immutable
             $(as...)
 
             # Then mark this object immutable
-            obj.__mutt_mutable = false
+            set_immutable_flag!(obj)
         end
         obj
     end
 end
+
+"""
+    set_immutable_flag!(obj)
+
+For `MuttsTypes`, sets the `__mutt_mutable` property to `false`. Write a method
+for your type with signature `set_immutable_flag!(::MuttsType, o::YourType)` if your
+type does not have the `__mutt_mutable` property.
+"""
+set_immutable_flag!(o::T) where T = set_immutable_flag!(mutts_trait(T), o)
+set_immutable_flag!(::MuttsType, o) = o.__mutt_mutable = false
 
 """
     branch!(obj)
@@ -109,19 +119,17 @@ Return a mutable shallow copy of Mutts object `obj`, whose children are all stil
 branch!(obj::T) where T = branch!(mutts_trait(T), obj)
 function branch!(::MuttsType, obj)
     branchactions(obj)
-    markimmutable!(obj)
+    mark_immutable!(obj)
 
-    obj = copy(obj)
-    obj.__mutt_mutable = true
-    obj
+    return make_mutable_copy(obj)
 end
 
-
+function make_mutable_copy end
 # Overload setproperty! for Mutts types to throw exception if attempting to modify a Mutt
 # once it's been marked immutable.
 # NOTE: The @mutt macro will overload setproperty!(obj::T, name, x) to call this method.
 function Base.setproperty!(::MuttsType, obj, name::Symbol, x)
-    @assert ismutable(obj)
+    @assert is_mutts_mutable(obj)
     setfield!(obj, name, x)
 end
 
@@ -136,13 +144,13 @@ are essentially immutable data structures, that give the flexibility of mutating
 them until they are "finished", at which point they are free to be shared with
 other Tasks, or other parts of the code.
 
-`Mutt` types act like mutable structs, until the user calls `markimmutable!(obj)`,
+`Mutt` types act like mutable structs, until the user calls `mark_immutable!(obj)`,
 after which they act like purely immutable types.
 
 The complete API includes:
- - [`markimmutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
+ - [`mark_immutable!(obj)`](@ref): Freeze `obj`, preventing any future mutations.
  - [`branch!(obj)`](@ref): Make a _mutable_ shallow copy of `obj`.
- - [`getmutableversion(obj)`](@ref): Return a mutable version of `obj`, either
+ - [`mutable_version(obj)`](@ref): Return a mutable version of `obj`, either
    `obj` itself if already mutable, or a [`branch!`ed](@ref branch!) copy.
  - [`branchactions(obj::Mutt)`](@ref): Users can override this callback for their
    type with any actions that need to occur when it is branched.
