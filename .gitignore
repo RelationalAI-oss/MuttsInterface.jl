@@ -1,0 +1,19 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.*.mem
+
+.idea
+.conda
+.ipynb_checkpoints
+.julia
+.delve
+*.nbconvert.ipynb
+.DS_Store
+
+# vim swap files
+.sw*
+.*.sw*
+*~
+.*.swp
+Session.vim
+.vscode
