@@ -1,14 +1,14 @@
 
 module MuttsVersionedTrees
 
-using Mutts
+using MuttsInterface
 using AbstractTrees  # For printing
 
 const insert!, delete! = Base.insert!, Base.delete!  # For export
 export VTree, insert!, delete!
 
-const mark_immutable! = Mutts.mark_immutable!  # For export
-export mark_immutable!  # From Mutts
+const mark_immutable! = MuttsInterface.mark_immutable!  # For export
+export mark_immutable!  # From MuttsInterface
 
 """
     VTree{T}(value; left = nothing, right = nothing)
@@ -89,9 +89,9 @@ end
 
 Base.show(io::IO, v::VTree) = AbstractTrees.print_tree(io, v)
 
-# ----- Copy needed for Mutts.branch!() ---------------
-Mutts.make_mutable_copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
-Mutts.make_mutable_copy(v::VTreeNode{T}) where T = VTreeNode{T}(v.value, v.left, v.right)
+# ----- Copy needed for MuttsInterface.branch!() ---------------
+MuttsInterface.make_mutable_copy(v::EmptyVTree{T}) where T = EmptyVTree{T}()
+MuttsInterface.make_mutable_copy(v::VTreeNode{T}) where T = VTreeNode{T}(v.value, v.left, v.right)
 
 # --- Insert! -----------------
 """

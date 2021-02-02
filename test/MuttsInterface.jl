@@ -1,6 +1,6 @@
 module MuttsTest
 
-using Mutts
+using MuttsInterface
 using Test
 using MacroTools
 
@@ -61,7 +61,7 @@ end
         @test is_mutts_mutable(s)
         mark_immutable!(s)
         @test !is_mutts_mutable(s)
-        Mutts.make_mutable_copy(s::S) = S(s.x)
+        MuttsInterface.make_mutable_copy(s::S) = S(s.x)
 
         s = S(1)
         @test is_mutts_mutable(branch!(s))

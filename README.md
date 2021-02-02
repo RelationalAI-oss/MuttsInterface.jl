@@ -1,10 +1,10 @@
-# Mutts.jl
+# MuttsInterface.jl
 
-Mutable Until Shared data structures. (MutTS - Mutable 'Til Shared)
+The interface for Mutable Until Shared data structures. (MutTS - Mutable 'Til Shared)
 
-![CI](https://github.com/RelationalAI-oss/Mutts.jl/workflows/CI/badge.svg)
+![CI](https://github.com/RelationalAI-oss/MuttsInterface.jl/workflows/CI/badge.svg)
 
-`Mutts.jl` provides infrastructure for building versioned data structures that follow the
+`MuttsInterface.jl` provides infrastructure for building versioned data structures that follow the
 _mutable-until-shared discipline_, providing all the benefits of purely-functional data
 structures (worry-free, lock-free, super fast concurrency), with the pragmatic programming
 and performance benefits of mutable data.
@@ -18,7 +18,7 @@ julia> @mutt struct S
            x::Int
        end
 
-julia> Base.copy(rhs::S) = S(rhs.x)
+julia> MuttsInterface.make_mutable_copy(rhs::S) = S(rhs.x)
 
 julia> s = S(2)
 S(true, 2)
@@ -33,5 +33,5 @@ julia> s
 S(false, 3)
 
 julia> s.x = 4
-ERROR: AssertionError: is_mutable(obj)
+ERROR: AssertionError: is_mutts_mutable(obj)
 ```

@@ -11,7 +11,7 @@ using Documenter
         :DocTestSetup,
         quote
             using MuttsVersionedTrees
-            using Mutts
+            using MuttsInterface
             head = VTree{Int}();
         
             head = insert!(head, 5);
