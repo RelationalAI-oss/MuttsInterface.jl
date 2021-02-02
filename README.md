@@ -1,8 +1,8 @@
 # Mutts.jl
 
-Mutable Until Shared data structures.
+Mutable Until Shared data structures. (MutTS - Mutable 'Til Shared)
 
-[![Build Status](https://travis-ci.com/RelationalAI-oss/Mutts.jl.svg?branch=master)](https://travis-ci.com/RelationalAI-oss/Mutts.jl)
+![CI](https://github.com/RelationalAI-oss/Mutts.jl/workflows/CI/badge.svg)
 
 `Mutts.jl` provides infrastructure for building versioned data structures that follow the
 _mutable-until-shared discipline_, providing all the benefits of purely-functional data
